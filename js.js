@@ -197,17 +197,82 @@ document.querySelectorAll('.skill-card').forEach(card => {
     });
 });
 
-// Project cards click effect
-document.querySelectorAll('.project-card').forEach(card => {
-    card.addEventListener('click', function() {
-        const link = this.querySelector('.project-link');
-        if (link) {
-            link.click();
+// Project cards click effect using delegation and dynamic render from GitHub
+const projectsGrid = document.querySelector('.projects-grid');
+if (projectsGrid) {
+    projectsGrid.addEventListener('click', function(e) {
+        const card = e.target.closest('.project-card');
+        if (card && projectsGrid.contains(card)) {
+            const link = card.querySelector('.project-link');
+            if (link) {
+                link.click();
+            }
         }
     });
-    
-    card.style.cursor = 'pointer';
-});
+
+    (async function loadGitHubProjects() {
+        const username = 'MatheusCardoso-Dev';
+        try {
+            const res = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`);
+            const repos = await res.json();
+
+            const desiredOrder = [
+                'CAFETERIA',
+                'BARBEARIA',
+                'FOTOGRAFO-VIDEOMAKER',
+                'CONSULTOR-COACH',
+                'OFICINAMECANICA',
+                'LOJADEROUPA',
+                'SAL-O-DE-BELEZA-MANICURE',
+                'ACADEMIA',
+                'PETSHOP'
+            ];
+            const desiredSet = new Set(desiredOrder);
+
+            const onlyDesired = Array.isArray(repos)
+                ? repos.filter(r => desiredSet.has(r.name))
+                : [];
+
+            // Ensure output order matches desiredOrder
+            const ordered = desiredOrder
+                .map(name => onlyDesired.find(r => r.name === name))
+                .filter(Boolean);
+
+            projectsGrid.innerHTML = '';
+
+            if (!ordered.length) {
+                projectsGrid.innerHTML = '<p style="opacity:.8">Nenhum projeto encontrado no GitHub com esses nomes.</p>';
+                return;
+            }
+
+            ordered.forEach(repo => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.style.cursor = 'pointer';
+                card.innerHTML = `
+                    <div class="project-image">
+                        <i class="fab fa-github"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>${repo.name}</h3>
+                        <p>${repo.description ? repo.description : 'Projeto no GitHub'}</p>
+                        <div class="project-tech">
+                            ${repo.language ? `<span>${repo.language}</span>` : ''}
+                            ${repo.homepage ? `<span>Demo</span>` : ''}
+                        </div>
+                        <a href="${repo.html_url}" target="_blank" class="project-link">
+                            <i class="fab fa-github"></i> Ver no GitHub
+                        </a>
+                    </div>
+                `;
+                projectsGrid.appendChild(card);
+                observer.observe(card);
+            });
+        } catch (e) {
+            console.error('Erro ao carregar repositórios do GitHub', e);
+        }
+    })();
+}
 
 // Smooth reveal animation for stats
 function animateStats() {
